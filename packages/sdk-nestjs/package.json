@@ -1,0 +1,10 @@
+{
+  "name": "@blackbox/nestjs",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "peerDependencies": {
+    "@nestjs/common": "^11.0.0"
+  }
+}

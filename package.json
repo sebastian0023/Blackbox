@@ -1,0 +1,59 @@
+{
+  "name": "blackbox",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Self-hosted monitoring control plane and NestJS SDK.",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.12.4",
+  "engines": {
+    "node": ">=22"
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "@prisma/client",
+      "@scarf/scarf"
+    ],
+    "onlyBuiltDependencies": [
+      "@prisma/engines",
+      "esbuild",
+      "prisma"
+    ]
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.workspace.json",
+    "clean": "tsc -b tsconfig.workspace.json --clean",
+    "db:generate": "node scripts/database.mjs generate",
+    "db:validate": "node scripts/database.mjs validate",
+    "dev:api": "tsx watch --tsconfig tsconfig.base.json apps/api/src/main.ts",
+    "dev:example": "tsx watch --tsconfig tsconfig.base.json apps/example-nest/src/main.ts",
+    "dev:worker": "tsx watch --tsconfig tsconfig.base.json apps/worker/src/main.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "infra:down": "docker compose -f deploy/docker-compose.yml down",
+    "infra:up": "docker compose -f deploy/docker-compose.yml up -d",
+    "lint": "eslint . --max-warnings=0",
+    "start:api": "pnpm --filter @blackbox/api start",
+    "start:example": "pnpm --filter @blackbox/example-nest start",
+    "start:worker": "pnpm --filter @blackbox/worker start",
+    "test": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:source-smoke": "node tests/smoke/runtime-smoke.mjs --source",
+    "test:smoke": "node tests/smoke/runtime-smoke.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.tests.json --pretty false"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@types/node": "^22.10.2",
+    "@types/supertest": "^6.0.2",
+    "eslint": "^9.17.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "supertest": "^7.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1",
+    "vitest": "^3.0.2"
+  }
+}
