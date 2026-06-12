@@ -1,7 +1,7 @@
 import type { Prisma } from '@blackbox/database';
 import { TeamRole } from '@blackbox/database';
 import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
+import { PrismaService } from '../../infrastructure/prisma.service';
 
 const roleRank: Readonly<Record<TeamRole, number>> = Object.freeze({
   [TeamRole.viewer]: 0,

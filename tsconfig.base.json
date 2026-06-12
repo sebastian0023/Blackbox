@@ -15,6 +15,7 @@
       "@blackbox/config": ["packages/config/src/index.ts"],
       "@blackbox/contracts": ["packages/contracts/src/index.ts"],
       "@blackbox/database": ["packages/database/src/index.ts"],
+      "@blackbox/nestjs": ["packages/sdk-nestjs/src/index.ts"],
       "@blackbox/server": ["packages/server/src/index.ts"],
       "@blackbox/testkit": ["packages/testkit/src/index.ts"]
     },

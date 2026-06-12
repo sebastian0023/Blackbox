@@ -8,7 +8,7 @@ import { CsrfGuard } from './auth/csrf.guard';
 import { SessionAuthGuard } from './auth/session-auth.guard';
 import { IngestKeysController } from './ingest-keys/ingest-keys.controller';
 import { IngestKeysService } from './ingest-keys/ingest-keys.service';
-import { PrismaService } from './prisma.service';
+import { PrismaService } from '../infrastructure/prisma.service';
 import { ProjectsController } from './projects/projects.controller';
 import { ProjectsService } from './projects/projects.service';
 import { PasswordHasher } from './security/password-hasher.service';

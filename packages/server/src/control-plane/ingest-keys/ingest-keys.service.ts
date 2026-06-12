@@ -1,10 +1,10 @@
 import { TeamRole, type Prisma } from '@blackbox/database';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
+import { PrismaService } from '../../infrastructure/prisma.service';
 import type { NamedResourceDto } from '../projects/projects.dto';
 import { SecretService } from '../security/secret.service';
 import { TeamAuthorizationService } from '../security/team-authorization.service';
-import { runSerializable } from '../serializable-transaction';
+import { runSerializable } from '../../infrastructure/serializable-transaction';
 import type { CreatedIngestKeyModel, IngestKeyMetadataModel } from './ingest-keys.models';
 
 const keySelection = Object.freeze({

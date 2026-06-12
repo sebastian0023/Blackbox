@@ -4,7 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { ExampleAppModule } from './example-app.module';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(ExampleAppModule);
+  const app = await NestFactory.create(ExampleAppModule.register());
   app.enableShutdownHooks();
   await app.listen(3001, '0.0.0.0');
 }

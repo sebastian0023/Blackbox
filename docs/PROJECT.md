@@ -308,6 +308,42 @@ Phase 3 prioritizes security over convenience:
   team-scoped `/projects`, project-scoped `/environments`, and
   environment-scoped `/ingest-keys`.
 
+#### Phase 4 Approved Heartbeat Contract
+
+Phase 4 prioritizes security and a small operational surface:
+
+- The SDK sends a heartbeat every 30 seconds by default. Missing-heartbeat
+  evaluation allows 90 seconds of delivery tolerance after the expected interval
+  before opening an incident.
+- `BlackboxModule.forRoot()` and `forRootAsync()` configure the control-plane URL,
+  ingest key, service name, optional service version, heartbeat interval, bounded
+  buffer size, request timeout, retry count, and controlled diagnostic callback.
+  The ingest key determines the environment; no client-provided environment
+  identifier is trusted.
+- The SDK emits only heartbeat fields in this phase: stable event and batch UUIDs,
+  contract version, occurrence time, expected interval, process uptime, service
+  name, and optional service version. It never collects request data, headers,
+  environment variables, or arbitrary metadata.
+- The SDK buffer defaults to 100 events and is capped at 1,000. Delivery uses at
+  most three bounded attempts with timeout, backoff, and jitter. Monitoring
+  failures never escape into or block the host application.
+- `POST /v1/ingest/batches` authenticates with `X-Blackbox-Ingest-Key`, accepts
+  only version `1` heartbeat batches, and limits a batch to 100 events and 100 KiB.
+  Valid batches are durably enqueued before the API returns `202`.
+- The BullMQ ingestion queue is bounded to 10,000 waiting or active jobs. Jobs use
+  stable batch identifiers, bounded retries, and retained failed jobs. Worker and
+  storage processing remain idempotent if a duplicate job is delivered.
+- Heartbeats use reviewed telemetry SQL behind typed repository interfaces.
+  Stable batch and event identifiers prevent duplicate storage.
+- One automatic missing-heartbeat state is maintained per reporting environment.
+  At most one active missing-heartbeat incident exists per environment. A later
+  heartbeat automatically resolves it.
+- Missing-heartbeat incidents always describe inferred downtime: a missing
+  heartbeat can indicate application, SDK, network, or control-plane failure.
+- Authenticated heartbeat queries require team, project, and environment scope.
+  They default to one hour, allow at most 24 hours, return at most 100 records,
+  and use deterministic cursor pagination.
+
 ### Conservative Collection
 
 Privacy is enforced primarily in the SDK, before transmission. Collection is

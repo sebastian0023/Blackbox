@@ -47,6 +47,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level high
       - run: docker compose -f deploy/docker-compose.yml config --quiet
       - run: pnpm db:generate
       - run: pnpm db:validate

@@ -9,9 +9,9 @@ Blackbox V1 monitors only NestJS applications that install and configure the SDK
 It does not monitor an entire host, unrelated processes, or applications that have
 not integrated the SDK.
 
-Phase 2 workspace foundation is complete. Phase 3 identity and project control
-plane implementation is in progress and available for owner acceptance. Telemetry,
-SDK collection, alerting, and notifications remain gated by later phases.
+The Phase 2 workspace foundation, Phase 3 identity and project control plane, and
+Phase 4 heartbeat vertical slice are complete. Process metrics, logs, errors,
+user-configurable rules, and notifications remain gated by later phases.
 
 - [Project purpose and architecture](docs/PROJECT.md)
 - [Integration phases and approval gates](docs/INTEGRATION_PHASES.md)
@@ -43,6 +43,8 @@ The API exposes:
 - Authentication and session APIs under `http://localhost:3000/v1/auth`
 - Team, membership, project, environment, and ingest-key management under
   `http://localhost:3000/v1/teams`
+- Authenticated heartbeat ingestion: `POST http://localhost:3000/v1/ingest/batches`
+- Team-scoped heartbeat queries under `http://localhost:3000/v1/teams`
 - OpenAPI UI: `http://localhost:3000/docs`
 - OpenAPI JSON: `http://localhost:3000/docs/openapi.json`
 
@@ -50,13 +52,24 @@ Phase 3 browser sessions use an HTTP-only `SameSite=Strict` cookie. Authenticate
 mutations also require the synchronizer token returned at registration or login in
 the `X-CSRF-Token` header. Ingest keys are displayed once and cannot be recovered.
 
-Run `pnpm dev:worker` and `pnpm dev:example` in separate terminals for the worker
-foundation and example NestJS app.
+Run `pnpm dev:worker` in a separate terminal. To run the example app with
+heartbeats, create an ingest key and start it with:
+
+```bash
+BLACKBOX_CONTROL_PLANE_URL=http://127.0.0.1:3000 \
+BLACKBOX_INGEST_KEY='<one-time-ingest-key>' \
+pnpm dev:example
+```
+
+The Phase 4 SDK is fail-open and sends only the approved heartbeat contract. It
+uses bounded memory, timeouts, and retries; missing-heartbeat incidents describe
+downtime as inferred rather than proven.
 
 ## Quality Commands
 
 ```bash
 pnpm format:check
+pnpm audit --audit-level high
 pnpm lint
 pnpm typecheck
 pnpm test

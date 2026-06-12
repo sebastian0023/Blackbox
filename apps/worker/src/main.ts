@@ -6,8 +6,8 @@ import { NestFactory } from '@nestjs/core';
 import { WorkerAppModule } from './worker-app.module';
 
 async function bootstrap(): Promise<void> {
-  loadServerConfig();
-  const app = await NestFactory.createApplicationContext(WorkerAppModule);
+  const config = loadServerConfig();
+  const app = await NestFactory.createApplicationContext(WorkerAppModule.register(config));
   app.enableShutdownHooks();
 }
 

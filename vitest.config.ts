@@ -16,6 +16,7 @@ export default defineConfig({
       '@blackbox/config': `${root}packages/config/src/index.ts`,
       '@blackbox/contracts': `${root}packages/contracts/src/index.ts`,
       '@blackbox/database': `${root}packages/database/src/index.ts`,
+      '@blackbox/nestjs': `${root}packages/sdk-nestjs/src/index.ts`,
       '@blackbox/server': `${root}packages/server/src/index.ts`,
       '@blackbox/testkit': `${root}packages/testkit/src/index.ts`,
     },

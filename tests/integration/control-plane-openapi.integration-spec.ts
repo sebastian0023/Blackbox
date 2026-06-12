@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ApiAppModule } from '../../apps/api/src/api-app.module';
 import { buildOpenApiConfig } from '../../apps/api/src/openapi';
 
-describe('Phase 3 OpenAPI contract', () => {
+describe('Phase 3 and Phase 4 OpenAPI contract', () => {
   let app: INestApplication;
   let document: OpenAPIObject;
 
@@ -23,6 +23,7 @@ describe('Phase 3 OpenAPI contract', () => {
     document = SwaggerModule.createDocument(app, buildOpenApiConfig());
     expect(document.components?.securitySchemes).toHaveProperty('session');
     expect(document.components?.securitySchemes).toHaveProperty('csrf');
+    expect(document.components?.securitySchemes).toHaveProperty('ingestKey');
   });
 
   afterAll(async () => {
@@ -49,6 +50,10 @@ describe('Phase 3 OpenAPI contract', () => {
     );
     expect(document.paths).toHaveProperty(
       '/v1/teams/{teamId}/projects/{projectId}/environments/{environmentId}/ingest-keys/{keyId}/revoke',
+    );
+    expect(document.paths).toHaveProperty('/v1/ingest/batches');
+    expect(document.paths).toHaveProperty(
+      '/v1/teams/{teamId}/projects/{projectId}/environments/{environmentId}/heartbeats',
     );
   });
 
@@ -154,6 +159,18 @@ describe('Phase 3 OpenAPI contract', () => {
         response: '200',
         security: sessionAndCsrf,
       },
+      {
+        method: 'post',
+        path: '/v1/ingest/batches',
+        response: '202',
+        security: [{ ingestKey: [] }],
+      },
+      {
+        method: 'get',
+        path: '/v1/teams/{teamId}/projects/{projectId}/environments/{environmentId}/heartbeats',
+        response: '200',
+        security: session,
+      },
     ] as const;
     const bodylessPosts = new Set([
       '/v1/auth/logout',
@@ -174,6 +191,20 @@ describe('Phase 3 OpenAPI contract', () => {
       ) {
         expect(operation?.requestBody).toBeDefined();
       }
+    }
+
+    const ingestion = document.paths['/v1/ingest/batches']?.post;
+    for (const response of ['202', '400', '401', '413', '503']) {
+      expect(ingestion?.responses).toHaveProperty(response);
+    }
+    expect(ingestion?.requestBody).toBeDefined();
+
+    const heartbeatQuery =
+      document.paths[
+        '/v1/teams/{teamId}/projects/{projectId}/environments/{environmentId}/heartbeats'
+      ]?.get;
+    for (const response of ['200', '400', '401', '404']) {
+      expect(heartbeatQuery?.responses).toHaveProperty(response);
     }
   });
 });

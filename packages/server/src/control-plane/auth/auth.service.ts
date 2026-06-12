@@ -1,10 +1,10 @@
 import { Prisma, type TeamRole } from '@blackbox/database';
 import { ConflictException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { SESSION_TTL_MS } from '../control-plane.constants';
-import { PrismaService } from '../prisma.service';
+import { PrismaService } from '../../infrastructure/prisma.service';
 import { PasswordHasher } from '../security/password-hasher.service';
 import { SecretService } from '../security/secret.service';
-import { runSerializable } from '../serializable-transaction';
+import { runSerializable } from '../../infrastructure/serializable-transaction';
 import { AuthRateLimitService } from './auth-rate-limit.service';
 import type { AuthEstablishedResponseModel, CurrentSessionResponseModel } from './auth.models';
 import type { LoginDto, RegisterDto } from './auth.dto';

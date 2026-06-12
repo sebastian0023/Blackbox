@@ -108,7 +108,7 @@ workspace files or dependencies are added.
 
 ## Phase 3: Identity And Project Control Plane
 
-**Status:** `in-progress`
+**Status:** `complete`
 
 **Objective:** Provide secure local identity, team isolation, project ownership,
 environments, and revocable SDK credentials.
@@ -144,7 +144,7 @@ and endpoint contract before implementation starts.
 
 ## Phase 4: Heartbeat Vertical Slice
 
-**Status:** `not-approved`
+**Status:** `complete`
 
 **Objective:** Deliver the first complete SDK-to-API-to-worker-to-storage-to-query
 flow and infer missing-heartbeat incidents.
@@ -409,7 +409,10 @@ release workflow, and public documentation before publishing.
 Record approved decisions or deviations here before implementation. Do not use this
 log for ordinary implementation details that already match the approved documents.
 
-| Date       | Phase | Decision or deviation                                                                           | Reason and consequence                                                                             | Owner approval      |
-| ---------- | ----- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------- |
-| 2026-06-09 | 1     | Adopt the documentation foundation defined by `docs/PROJECT.md`, `AGENTS.md`, and this roadmap. | Establishes review gates and project sources of truth before implementation.                       | Approved 2026-06-10 |
-| 2026-06-11 | 3     | Approve Phase 3 with security prioritized over convenience.                                     | Authorizes identity and control-plane implementation using the approved Phase 3 security contract. | Approved 2026-06-11 |
+| Date       | Phase | Decision or deviation                                                                           | Reason and consequence                                                                              | Owner approval      |
+| ---------- | ----- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------- |
+| 2026-06-09 | 1     | Adopt the documentation foundation defined by `docs/PROJECT.md`, `AGENTS.md`, and this roadmap. | Establishes review gates and project sources of truth before implementation.                        | Approved 2026-06-10 |
+| 2026-06-11 | 3     | Approve Phase 3 with security prioritized over convenience.                                     | Authorizes identity and control-plane implementation using the approved Phase 3 security contract.  | Approved 2026-06-11 |
+| 2026-06-11 | 3     | Accept Phase 3 after the security acceptance audit.                                             | All Phase 3 exit criteria and the Node.js 22 CI-equivalent acceptance suite passed.                 | Accepted 2026-06-11 |
+| 2026-06-11 | 4     | Approve the minimal secure heartbeat vertical-slice contract.                                   | Authorizes Phase 4 with the approved timing, ingestion, SDK, query, and inferred-downtime contract. | Approved 2026-06-11 |
+| 2026-06-12 | 4     | Accept Phase 4 after the security and reliability acceptance audit.                             | All Phase 4 exit criteria, clean migration/rollback checks, and Node.js 22 acceptance gates passed. | Accepted 2026-06-12 |

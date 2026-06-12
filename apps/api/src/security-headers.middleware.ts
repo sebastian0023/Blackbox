@@ -21,7 +21,7 @@ export class SecurityHeadersMiddleware {
     response.setHeader('X-Frame-Options', 'DENY');
 
     const path = request.originalUrl ?? request.url;
-    if (/^\/v1\/(?:auth|teams)(?:\/|$)/u.test(path)) {
+    if (/^\/v1\/(?:auth|ingest|teams)(?:\/|$)/u.test(path)) {
       response.setHeader('Cache-Control', 'no-store');
     }
 

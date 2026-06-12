@@ -8,5 +8,6 @@ export function buildOpenApiConfig(): Omit<OpenAPIObject, 'paths'> {
     .setVersion('1')
     .addCookieAuth(SESSION_COOKIE_NAME, { type: 'apiKey', in: 'cookie' }, 'session')
     .addApiKey({ type: 'apiKey', in: 'header', name: 'X-CSRF-Token' }, 'csrf')
+    .addApiKey({ type: 'apiKey', in: 'header', name: 'X-Blackbox-Ingest-Key' }, 'ingestKey')
     .build();
 }

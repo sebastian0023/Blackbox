@@ -6,5 +6,8 @@
   "types": "dist/index.d.ts",
   "peerDependencies": {
     "@nestjs/common": "^11.0.0"
+  },
+  "dependencies": {
+    "@blackbox/contracts": "workspace:*"
   }
 }

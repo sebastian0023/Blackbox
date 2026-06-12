@@ -1,5 +1,10 @@
 import type { ServerConfig } from '@blackbox/config';
-import { ControlPlaneModule, HealthModule, type ReadinessProbeOverrides } from '@blackbox/server';
+import {
+  ControlPlaneModule,
+  HealthModule,
+  TelemetryApiModule,
+  type ReadinessProbeOverrides,
+} from '@blackbox/server';
 import {
   Module,
   RequestMethod,
@@ -21,7 +26,11 @@ export class ApiAppModule implements NestModule {
   static register(options: ApiAppModuleOptions): DynamicModule {
     return {
       module: ApiAppModule,
-      imports: [ControlPlaneModule.register(options), HealthModule.register(options)],
+      imports: [
+        ControlPlaneModule.register(options),
+        HealthModule.register(options),
+        TelemetryApiModule.register(options.config),
+      ],
       providers: [
         {
           provide: APP_PIPE,

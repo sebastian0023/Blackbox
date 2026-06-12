@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@blackbox/config": "workspace:*",
+    "@blackbox/server": "workspace:*",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "dotenv": "^16.4.7",

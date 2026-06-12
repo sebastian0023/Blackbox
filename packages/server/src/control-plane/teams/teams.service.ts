@@ -1,8 +1,8 @@
 import { Prisma, TeamRole } from '@blackbox/database';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
+import { PrismaService } from '../../infrastructure/prisma.service';
 import { TeamAuthorizationService } from '../security/team-authorization.service';
-import { runSerializable } from '../serializable-transaction';
+import { runSerializable } from '../../infrastructure/serializable-transaction';
 import type { AddTeamMemberDto, UpdateTeamMemberRoleDto, UpdateTeamDto } from './teams.dto';
 import type { TeamMemberModel, TeamModel } from './teams.models';
 
