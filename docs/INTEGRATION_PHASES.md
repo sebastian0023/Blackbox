@@ -108,7 +108,7 @@ workspace files or dependencies are added.
 
 ## Phase 3: Identity And Project Control Plane
 
-**Status:** `not-approved`
+**Status:** `in-progress`
 
 **Objective:** Provide secure local identity, team isolation, project ownership,
 environments, and revocable SDK credentials.
@@ -409,6 +409,7 @@ release workflow, and public documentation before publishing.
 Record approved decisions or deviations here before implementation. Do not use this
 log for ordinary implementation details that already match the approved documents.
 
-| Date       | Phase | Decision or deviation                                                                           | Reason and consequence                                                       | Owner approval      |
-| ---------- | ----- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------- |
-| 2026-06-09 | 1     | Adopt the documentation foundation defined by `docs/PROJECT.md`, `AGENTS.md`, and this roadmap. | Establishes review gates and project sources of truth before implementation. | Approved 2026-06-10 |
+| Date       | Phase | Decision or deviation                                                                           | Reason and consequence                                                                             | Owner approval      |
+| ---------- | ----- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------- |
+| 2026-06-09 | 1     | Adopt the documentation foundation defined by `docs/PROJECT.md`, `AGENTS.md`, and this roadmap. | Establishes review gates and project sources of truth before implementation.                       | Approved 2026-06-10 |
+| 2026-06-11 | 3     | Approve Phase 3 with security prioritized over convenience.                                     | Authorizes identity and control-plane implementation using the approved Phase 3 security contract. | Approved 2026-06-11 |

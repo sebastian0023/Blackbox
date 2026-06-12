@@ -15,6 +15,7 @@
     ],
     "onlyBuiltDependencies": [
       "@prisma/engines",
+      "argon2",
       "esbuild",
       "prisma"
     ]
@@ -23,6 +24,7 @@
     "build": "tsc -b tsconfig.workspace.json",
     "clean": "tsc -b tsconfig.workspace.json --clean",
     "db:generate": "node scripts/database.mjs generate",
+    "db:migrate": "node scripts/database.mjs migrate:deploy",
     "db:validate": "node scripts/database.mjs validate",
     "dev:api": "tsx watch --tsconfig tsconfig.base.json apps/api/src/main.ts",
     "dev:example": "tsx watch --tsconfig tsconfig.base.json apps/example-nest/src/main.ts",
@@ -45,10 +47,14 @@
     "@eslint/js": "^9.17.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
+    "@nestjs/swagger": "^11.0.0",
     "@types/node": "^22.10.2",
     "@types/supertest": "^6.0.2",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
     "eslint": "^9.17.0",
     "globals": "^15.14.0",
+    "ioredis": "^5.4.2",
     "prettier": "^3.4.2",
     "supertest": "^7.0.0",
     "tsx": "^4.19.2",

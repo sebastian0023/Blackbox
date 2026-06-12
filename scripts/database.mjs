@@ -4,11 +4,15 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const supportedCommands = new Set(['generate', 'validate']);
+const supportedCommands = new Map([
+  ['generate', ['generate']],
+  ['migrate:deploy', ['migrate', 'deploy']],
+  ['validate', ['validate']],
+]);
 const command = process.argv[2];
 
 if (!command || !supportedCommands.has(command)) {
-  throw new Error(`Expected one database command: ${[...supportedCommands].join(', ')}`);
+  throw new Error(`Expected one database command: ${[...supportedCommands.keys()].join(', ')}`);
 }
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -21,10 +25,15 @@ if (existsSync(environmentPath)) {
 const databaseRequire = createRequire(join(root, 'packages/database/package.json'));
 const prismaCli = databaseRequire.resolve('prisma/build/index.js');
 const schemaPath = join(root, 'packages/database/prisma/schema.prisma');
-const result = spawnSync(process.execPath, [prismaCli, command, '--schema', schemaPath], {
-  env: process.env,
-  stdio: 'inherit',
-});
+const prismaArguments = supportedCommands.get(command);
+const result = spawnSync(
+  process.execPath,
+  [prismaCli, ...prismaArguments, '--schema', schemaPath],
+  {
+    env: process.env,
+    stdio: 'inherit',
+  },
+);
 
 if (result.error) {
   throw result.error;

@@ -7,8 +7,13 @@
   "dependencies": {
     "@blackbox/config": "workspace:*",
     "@blackbox/contracts": "workspace:*",
+    "@blackbox/database": "workspace:*",
     "@nestjs/common": "^11.0.0",
     "@nestjs/swagger": "^11.0.0",
+    "argon2": "^0.44.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "cookie": "^1.1.1",
     "ioredis": "^5.4.2",
     "pg": "^8.13.1"
   },

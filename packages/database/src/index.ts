@@ -1,1 +1,1 @@
-export const databasePackageName = '@blackbox/database';
+export { Prisma, PrismaClient, TeamRole } from '@prisma/client';

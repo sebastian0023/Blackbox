@@ -3,19 +3,14 @@ import 'dotenv/config';
 import { loadServerConfig } from '@blackbox/config';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { SwaggerModule } from '@nestjs/swagger';
 import { ApiAppModule } from './api-app.module';
+import { buildOpenApiConfig } from './openapi';
 
 async function bootstrap(): Promise<void> {
   const config = loadServerConfig();
   const app = await NestFactory.create(ApiAppModule.register({ config }));
-  const openApiConfig = new DocumentBuilder()
-    .setTitle('Blackbox API')
-    .setDescription('Blackbox control-plane API')
-    .setVersion('1')
-    .build();
-
-  const openApiDocument = SwaggerModule.createDocument(app, openApiConfig);
+  const openApiDocument = SwaggerModule.createDocument(app, buildOpenApiConfig());
   SwaggerModule.setup('docs', app, openApiDocument, {
     jsonDocumentUrl: 'docs/openapi.json',
   });

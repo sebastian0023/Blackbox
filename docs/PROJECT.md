@@ -273,6 +273,41 @@ history are not removed by telemetry retention jobs.
 - SDK ingest keys cannot read telemetry or call management APIs.
 - Revoked ingest keys stop authorizing new batches immediately.
 
+#### Phase 3 Approved Security Contract
+
+Phase 3 prioritizes security over convenience:
+
+- Registration creates a user, an initial team, and an `owner` membership in one
+  transaction. Email addresses are normalized before uniqueness checks.
+- Passwords must be 12 to 256 characters. Argon2id uses an explicit reviewed
+  memory and iteration cost. Authentication failures return a generic response.
+- Browser sessions use 256-bit opaque random tokens. Only SHA-256 token hashes
+  are stored. Sessions expire after eight hours, are revoked by deletion, and are
+  capped at ten active sessions per user.
+- The session cookie is HTTP-only, `SameSite=Strict`, scoped to `/`, and secure
+  outside development. Mutating authenticated requests also require a matching
+  synchronizer token in `X-CSRF-Token`.
+- Team scope is derived from the authenticated membership and enforced in every
+  repository query. A client-provided team identifier never grants access.
+- Login attempts are bounded per normalized email and source address, and
+  registration attempts are bounded per source address, through hashed Redis
+  rate-limit keys. Authentication fails closed if that protection is unavailable.
+- `owner` manages memberships and all team resources. `admin` manages projects,
+  environments, and ingest keys. `member` creates and updates projects and
+  environments but cannot perform destructive deletion or manage memberships or
+  ingest keys. `viewer` is read-only.
+- Membership changes are owner-only. The final owner cannot be removed or
+  demoted. Phase 3 adds existing registered users directly and does not implement
+  invitation or onboarding flows.
+- Project and environment identifiers are always queried together with their
+  owning team identifier to prevent identifier-substitution access.
+- Ingest keys contain 256 bits of random secret material, are displayed once,
+  and are stored only as SHA-256 hashes with non-secret identifying metadata.
+  Only owners and admins may create or revoke them.
+- Phase 3 management APIs are versioned under `/v1`: `/auth`, `/teams`,
+  team-scoped `/projects`, project-scoped `/environments`, and
+  environment-scoped `/ingest-keys`.
+
 ### Conservative Collection
 
 Privacy is enforced primarily in the SDK, before transmission. Collection is
