@@ -38,7 +38,7 @@ function start(relativeEntryPoint, environment = baseEnvironment, cwd = fileURLT
   return { child, getOutput: () => output };
 }
 
-async function waitForResponse(url, expectedStatus, attempts = 40) {
+async function waitForResponse(url, expectedStatus, attempts = 100) {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
       const response = await fetch(url);

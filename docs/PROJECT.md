@@ -344,6 +344,73 @@ Phase 4 prioritizes security and a small operational surface:
   They default to one hour, allow at most 24 hours, return at most 100 records,
   and use deterministic cursor pagination.
 
+#### Phase 5 Approved Process Metrics Contract
+
+Phase 5 extends the secure heartbeat path without widening collection:
+
+- The SDK samples process metrics every 30 seconds by default. The interval is
+  configurable from 5 seconds to 5 minutes.
+- Process metrics contain only stable event identifiers, occurrence time, service
+  name and optional version, process CPU percentage, RSS memory bytes, process
+  uptime, event-loop p99 delay, and the cumulative number of telemetry events
+  dropped because the SDK buffer was full.
+- Heartbeats and process metrics share ingestion contract version `1`, one
+  oldest-first in-memory buffer, and batches limited to 100 events and 100 KiB.
+  The buffer defaults to 100 events and is capped at 1,000.
+- Collection and delivery remain fail-open. Metrics do not include host metrics,
+  request data, headers, environment variables, or arbitrary metadata.
+- Process metrics use a monthly range-partitioned PostgreSQL table, reviewed SQL
+  migration, typed repository methods, stable event identifiers, and
+  purpose-specific indexes.
+- Authenticated process-metric queries require team, project, and environment
+  scope. They default to one hour, allow at most 24 hours, return at most 100
+  records, and use deterministic cursor pagination.
+- The initial documented local load target is 100 metric events per second, with
+  p95 ingestion acceptance and bounded metric queries below 250 milliseconds.
+- At the default sampling interval, the documented local SDK overhead target is
+  below 1% CPU and below 10 MiB additional RSS.
+
+#### Phase 6 Approved Logs And Errors Contract
+
+Phase 6 adds explicit structured logs and process-level error observation while
+keeping privacy and host behavior conservative:
+
+- The SDK exports one explicit `BlackboxLogger` implementing NestJS
+  `LoggerService`. It wraps and always forwards to a caller-provided host logger.
+  Blackbox does not patch the global console, Nest internals, or unrelated
+  loggers, and SDK diagnostics do not pass through the capture wrapper.
+- The SDK observes uncaught exceptions and process-fatal unhandled rejections
+  only through `uncaughtExceptionMonitor`, using its origin to distinguish them.
+  It never installs an `unhandledRejection` listener because that changes Node's
+  default host-process exit behavior. It does not replace host handlers, change
+  process exit behavior, or claim errors were handled.
+- Logs contain only stable identifiers, occurrence time, supported level,
+  message, optional context, service identity, and filtered metadata. Errors
+  contain only stable identifiers, occurrence time, name, message, optional
+  stack, source, service identity, and filtered metadata.
+- Messages and metadata strings are limited to 2 KiB, stacks to 16 KiB, context
+  to 100 characters, metadata to 16 keys, arrays to 20 items, and recursive
+  depth to 5. Individual log and error events larger than 32 KiB are dropped
+  before buffering.
+- Metadata collection is disabled unless an explicit top-level
+  `metadataAllowlist` permits a key. Case-insensitive recursive redaction
+  replaces configured sensitive-key values with `[REDACTED]`. Defaults include
+  authorization, cookie, password, secret, token, and
+  `x-blackbox-ingest-key`.
+- Logs and errors reuse ingestion contract version `1`, the shared bounded SDK
+  buffer, durable queue, global event idempotency, and the established 100-event
+  and 100-KiB batch limits.
+- Logs and errors use separate monthly range-partitioned PostgreSQL tables,
+  reviewed SQL migrations, typed repository methods, and purpose-specific
+  indexes.
+- Authenticated log and error queries require team, project, and environment
+  scope. They default to one hour, allow at most 24 hours, return at most 100
+  records, and use deterministic cursor pagination. Log queries may additionally
+  filter by one exact supported level.
+- Phase 6 does not add log-file tailing, request or header capture, console
+  patching, tracing, source maps, external log integrations, full-text search,
+  arbitrary metadata search, or alert behavior.
+
 ### Conservative Collection
 
 Privacy is enforced primarily in the SDK, before transmission. Collection is

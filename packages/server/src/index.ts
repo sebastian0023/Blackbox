@@ -11,4 +11,4 @@ export type {
   ReadinessProbe,
   ReadinessProbeOverrides,
 } from './health/health.types';
-export type { HeartbeatJob } from './telemetry/telemetry.types';
+export type { TelemetryJob } from './telemetry/telemetry.types';

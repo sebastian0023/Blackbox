@@ -12,12 +12,12 @@ import { MissingHeartbeatEvaluatorService } from './missing-heartbeat-evaluator.
 import { redisConnectionOptions } from './redis-connection';
 import { TELEMETRY_QUEUE_NAME } from './telemetry.constants';
 import { TelemetryProcessorService } from './telemetry-processor.service';
-import type { HeartbeatJob } from './telemetry.types';
+import type { TelemetryJob } from './telemetry.types';
 
 @Injectable()
 export class TelemetryWorkerRuntimeService implements OnModuleDestroy, OnModuleInit {
   private readonly logger = new Logger(TelemetryWorkerRuntimeService.name);
-  private readonly worker: Worker<HeartbeatJob>;
+  private readonly worker: Worker<TelemetryJob>;
   private evaluationTimer?: ReturnType<typeof setInterval>;
 
   constructor(
@@ -26,7 +26,7 @@ export class TelemetryWorkerRuntimeService implements OnModuleDestroy, OnModuleI
     @Inject(MissingHeartbeatEvaluatorService)
     private readonly evaluator: MissingHeartbeatEvaluatorService,
   ) {
-    this.worker = new Worker<HeartbeatJob>(
+    this.worker = new Worker<TelemetryJob>(
       TELEMETRY_QUEUE_NAME,
       async (job) => processor.process(job.data),
       {

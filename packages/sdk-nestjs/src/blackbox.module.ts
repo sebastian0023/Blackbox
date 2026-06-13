@@ -13,9 +13,10 @@ import {
   type BlackboxModuleOptions,
 } from './blackbox-options';
 import { HeartbeatRuntime } from './heartbeat-runtime';
+import type { ErrorSource, LogLevel } from '@blackbox/contracts';
 
 @Injectable()
-class BlackboxRuntimeService implements OnModuleDestroy, OnModuleInit {
+export class BlackboxRuntimeService implements OnModuleDestroy, OnModuleInit {
   private readonly runtime: HeartbeatRuntime;
 
   constructor(@Inject(BLACKBOX_OPTIONS) options: BlackboxModuleOptions) {
@@ -28,6 +29,14 @@ class BlackboxRuntimeService implements OnModuleDestroy, OnModuleInit {
 
   onModuleDestroy(): Promise<void> {
     return this.runtime.stop();
+  }
+
+  captureError(error: unknown, metadata?: unknown, source?: ErrorSource): void {
+    this.runtime.captureError(error, metadata, source);
+  }
+
+  captureLog(level: LogLevel, message: unknown, metadata?: unknown, context?: unknown): void {
+    this.runtime.captureLog(level, message, metadata, context);
   }
 }
 
@@ -51,6 +60,7 @@ export class BlackboxModule {
   private static create(optionsProvider: Provider): DynamicModule {
     return {
       module: BlackboxModule,
+      exports: [BlackboxRuntimeService],
       providers: [optionsProvider, BlackboxRuntimeService],
     };
   }

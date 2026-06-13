@@ -1,6 +1,12 @@
-import { BlackboxModule, type BlackboxModuleOptions } from '@blackbox/nestjs';
+import {
+  BlackboxLogger,
+  BlackboxModule,
+  BlackboxRuntimeService,
+  type BlackboxModuleOptions,
+} from '@blackbox/nestjs';
 import { Module, type DynamicModule } from '@nestjs/common';
 import { ExampleController } from './example.controller';
+import { ExampleHostLogger } from './example-host.logger';
 
 @Module({})
 export class ExampleAppModule {
@@ -16,6 +22,15 @@ export class ExampleAppModule {
       controllers: [ExampleController],
       imports: [BlackboxModule.forRoot(options)],
       module: ExampleAppModule,
+      providers: [
+        ExampleHostLogger,
+        {
+          inject: [ExampleHostLogger, BlackboxRuntimeService],
+          provide: BlackboxLogger,
+          useFactory: (host: ExampleHostLogger, runtime: BlackboxRuntimeService) =>
+            new BlackboxLogger(host, runtime),
+        },
+      ],
     };
   }
 }

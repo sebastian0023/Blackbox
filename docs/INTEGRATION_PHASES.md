@@ -183,7 +183,7 @@ payload contract, and SDK configuration contract before implementation starts.
 
 ## Phase 5: Process Metrics Vertical Slice
 
-**Status:** `not-approved`
+**Status:** `complete`
 
 **Objective:** Add reliable process health metrics from collection through bounded
 querying.
@@ -220,7 +220,7 @@ storage shape, and initial performance targets before implementation starts.
 
 ## Phase 6: Logs And Errors Vertical Slice
 
-**Status:** `not-approved`
+**Status:** `in-progress`
 
 **Objective:** Capture structured NestJS logs and application errors while proving
 the conservative collection and redaction guarantees.
@@ -409,10 +409,14 @@ release workflow, and public documentation before publishing.
 Record approved decisions or deviations here before implementation. Do not use this
 log for ordinary implementation details that already match the approved documents.
 
-| Date       | Phase | Decision or deviation                                                                           | Reason and consequence                                                                              | Owner approval      |
-| ---------- | ----- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------- |
-| 2026-06-09 | 1     | Adopt the documentation foundation defined by `docs/PROJECT.md`, `AGENTS.md`, and this roadmap. | Establishes review gates and project sources of truth before implementation.                        | Approved 2026-06-10 |
-| 2026-06-11 | 3     | Approve Phase 3 with security prioritized over convenience.                                     | Authorizes identity and control-plane implementation using the approved Phase 3 security contract.  | Approved 2026-06-11 |
-| 2026-06-11 | 3     | Accept Phase 3 after the security acceptance audit.                                             | All Phase 3 exit criteria and the Node.js 22 CI-equivalent acceptance suite passed.                 | Accepted 2026-06-11 |
-| 2026-06-11 | 4     | Approve the minimal secure heartbeat vertical-slice contract.                                   | Authorizes Phase 4 with the approved timing, ingestion, SDK, query, and inferred-downtime contract. | Approved 2026-06-11 |
-| 2026-06-12 | 4     | Accept Phase 4 after the security and reliability acceptance audit.                             | All Phase 4 exit criteria, clean migration/rollback checks, and Node.js 22 acceptance gates passed. | Accepted 2026-06-12 |
+| Date       | Phase | Decision or deviation                                                                           | Reason and consequence                                                                                 | Owner approval      |
+| ---------- | ----- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------- |
+| 2026-06-09 | 1     | Adopt the documentation foundation defined by `docs/PROJECT.md`, `AGENTS.md`, and this roadmap. | Establishes review gates and project sources of truth before implementation.                           | Approved 2026-06-10 |
+| 2026-06-11 | 3     | Approve Phase 3 with security prioritized over convenience.                                     | Authorizes identity and control-plane implementation using the approved Phase 3 security contract.     | Approved 2026-06-11 |
+| 2026-06-11 | 3     | Accept Phase 3 after the security acceptance audit.                                             | All Phase 3 exit criteria and the Node.js 22 CI-equivalent acceptance suite passed.                    | Accepted 2026-06-11 |
+| 2026-06-11 | 4     | Approve the minimal secure heartbeat vertical-slice contract.                                   | Authorizes Phase 4 with the approved timing, ingestion, SDK, query, and inferred-downtime contract.    | Approved 2026-06-11 |
+| 2026-06-12 | 4     | Accept Phase 4 after the security and reliability acceptance audit.                             | All Phase 4 exit criteria, clean migration/rollback checks, and Node.js 22 acceptance gates passed.    | Accepted 2026-06-12 |
+| 2026-06-12 | 5     | Approve the minimal secure process-metrics vertical-slice contract.                             | Authorizes Phase 5 with bounded collection, mixed ingestion, partitioned storage, and query targets.   | Approved 2026-06-12 |
+| 2026-06-13 | 5     | Accept Phase 5 after the security, reliability, and performance acceptance audit.               | All Phase 5 exit criteria and the complete acceptance suite passed after final buffer hardening.       | Accepted 2026-06-13 |
+| 2026-06-13 | 6     | Approve the minimal secure logs-and-errors vertical-slice contract.                             | Authorizes Phase 6 with explicit logger capture, bounded errors, recursive redaction, and scoped APIs. | Approved 2026-06-13 |
+| 2026-06-13 | 6     | Observe fatal unhandled rejections only through `uncaughtExceptionMonitor`.                     | A Node `unhandledRejection` listener changes host exit behavior; monitor-only capture preserves it.    | Approved 2026-06-13 |

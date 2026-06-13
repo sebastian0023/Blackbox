@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ApiAppModule } from '../../apps/api/src/api-app.module';
 import { buildOpenApiConfig } from '../../apps/api/src/openapi';
 
-describe('Phase 3 and Phase 4 OpenAPI contract', () => {
+describe('Phase 3 through Phase 6 OpenAPI contract', () => {
   let app: INestApplication;
   let document: OpenAPIObject;
 
@@ -54,6 +54,15 @@ describe('Phase 3 and Phase 4 OpenAPI contract', () => {
     expect(document.paths).toHaveProperty('/v1/ingest/batches');
     expect(document.paths).toHaveProperty(
       '/v1/teams/{teamId}/projects/{projectId}/environments/{environmentId}/heartbeats',
+    );
+    expect(document.paths).toHaveProperty(
+      '/v1/teams/{teamId}/projects/{projectId}/environments/{environmentId}/process-metrics',
+    );
+    expect(document.paths).toHaveProperty(
+      '/v1/teams/{teamId}/projects/{projectId}/environments/{environmentId}/logs',
+    );
+    expect(document.paths).toHaveProperty(
+      '/v1/teams/{teamId}/projects/{projectId}/environments/{environmentId}/errors',
     );
   });
 
@@ -171,6 +180,24 @@ describe('Phase 3 and Phase 4 OpenAPI contract', () => {
         response: '200',
         security: session,
       },
+      {
+        method: 'get',
+        path: '/v1/teams/{teamId}/projects/{projectId}/environments/{environmentId}/process-metrics',
+        response: '200',
+        security: session,
+      },
+      {
+        method: 'get',
+        path: '/v1/teams/{teamId}/projects/{projectId}/environments/{environmentId}/logs',
+        response: '200',
+        security: session,
+      },
+      {
+        method: 'get',
+        path: '/v1/teams/{teamId}/projects/{projectId}/environments/{environmentId}/errors',
+        response: '200',
+        security: session,
+      },
     ] as const;
     const bodylessPosts = new Set([
       '/v1/auth/logout',
@@ -205,6 +232,14 @@ describe('Phase 3 and Phase 4 OpenAPI contract', () => {
       ]?.get;
     for (const response of ['200', '400', '401', '404']) {
       expect(heartbeatQuery?.responses).toHaveProperty(response);
+    }
+
+    const processMetricQuery =
+      document.paths[
+        '/v1/teams/{teamId}/projects/{projectId}/environments/{environmentId}/process-metrics'
+      ]?.get;
+    for (const response of ['200', '400', '401', '404']) {
+      expect(processMetricQuery?.responses).toHaveProperty(response);
     }
   });
 });

@@ -19,7 +19,10 @@
       "argon2",
       "esbuild",
       "prisma"
-    ]
+    ],
+    "overrides": {
+      "esbuild": "0.28.1"
+    }
   },
   "scripts": {
     "build": "tsc -b tsconfig.workspace.json",
@@ -40,6 +43,8 @@
     "start:worker": "pnpm --filter @blackbox/worker start",
     "test": "vitest run --config vitest.config.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:load:phase5": "node tests/load/run-process-metrics-load.mjs",
+    "test:overhead:phase5": "node --expose-gc tests/load/sdk-overhead.mjs",
     "test:source-smoke": "node tests/smoke/runtime-smoke.mjs --source",
     "test:smoke": "node tests/smoke/runtime-smoke.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.tests.json --pretty false"

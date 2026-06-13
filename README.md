@@ -9,12 +9,12 @@ Blackbox V1 monitors only NestJS applications that install and configure the SDK
 It does not monitor an entire host, unrelated processes, or applications that have
 not integrated the SDK.
 
-The Phase 2 workspace foundation, Phase 3 identity and project control plane, and
-Phase 4 heartbeat vertical slice are complete. Process metrics, logs, errors,
-user-configurable rules, and notifications remain gated by later phases.
+Phases 2 through 5 are complete. The Phase 6 logs-and-errors vertical slice is in
+progress. User-configurable rules and notifications remain gated by later phases.
 
 - [Project purpose and architecture](docs/PROJECT.md)
 - [Integration phases and approval gates](docs/INTEGRATION_PHASES.md)
+- [Phase 5 performance verification](docs/PHASE_5_PERFORMANCE.md)
 - [Compact instructions for coding agents](AGENTS.md)
 
 ## Local Foundation
@@ -43,8 +43,10 @@ The API exposes:
 - Authentication and session APIs under `http://localhost:3000/v1/auth`
 - Team, membership, project, environment, and ingest-key management under
   `http://localhost:3000/v1/teams`
-- Authenticated heartbeat ingestion: `POST http://localhost:3000/v1/ingest/batches`
-- Team-scoped heartbeat queries under `http://localhost:3000/v1/teams`
+- Authenticated telemetry ingestion:
+  `POST http://localhost:3000/v1/ingest/batches`
+- Team-scoped heartbeat, process-metric, log, and error queries under
+  `http://localhost:3000/v1/teams`
 - OpenAPI UI: `http://localhost:3000/docs`
 - OpenAPI JSON: `http://localhost:3000/docs/openapi.json`
 
@@ -61,9 +63,25 @@ BLACKBOX_INGEST_KEY='<one-time-ingest-key>' \
 pnpm dev:example
 ```
 
-The Phase 4 SDK is fail-open and sends only the approved heartbeat contract. It
-uses bounded memory, timeouts, and retries; missing-heartbeat incidents describe
-downtime as inferred rather than proven.
+The SDK is fail-open and sends only the approved conservative contracts. It uses
+one bounded memory buffer, timeouts, and retries; missing-heartbeat incidents
+describe downtime as inferred rather than proven.
+
+For explicit NestJS logger capture, inject `BlackboxRuntimeService`, wrap the
+application's existing logger, and install the wrapper:
+
+```ts
+import { BlackboxLogger, BlackboxRuntimeService } from '@blackbox/nestjs';
+import { ConsoleLogger } from '@nestjs/common';
+
+const runtime = app.get(BlackboxRuntimeService);
+app.useLogger(new BlackboxLogger(new ConsoleLogger(), runtime));
+```
+
+Only calls through that wrapper are captured. Configure `metadataAllowlist` for
+permitted top-level metadata keys. Sensitive keys are recursively replaced with
+`[REDACTED]`; the SDK never patches console or installs an
+`unhandledRejection` listener.
 
 ## Quality Commands
 
@@ -75,6 +93,8 @@ pnpm typecheck
 pnpm test
 pnpm db:migrate
 pnpm test:integration
+pnpm test:load:phase5
+pnpm test:overhead:phase5
 pnpm test:source-smoke
 pnpm build
 pnpm test:smoke

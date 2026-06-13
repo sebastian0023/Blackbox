@@ -37,7 +37,7 @@ function emailFor(localPart: string): string {
   return `${localPart}+${testRunId}@example.com`;
 }
 
-describeDependencies('Phase 4 heartbeat vertical slice', () => {
+describeDependencies('Phase 4 through Phase 6 telemetry vertical slices', () => {
   let api: INestApplication;
   let evaluator: MissingHeartbeatEvaluatorService;
   let prisma: PrismaClient;
@@ -73,9 +73,10 @@ describeDependencies('Phase 4 heartbeat vertical slice', () => {
     await queue.clean(0, 10_000, 'failed');
     await prisma.$executeRawUnsafe(`
       TRUNCATE TABLE
-        "heartbeat_incidents", "heartbeat_states", "heartbeat_events", "telemetry_event_ids",
-        "telemetry_batches", "ingest_keys", "environments", "projects", "sessions",
-        "team_memberships", "teams", "users"
+        "heartbeat_incidents", "heartbeat_states", "heartbeat_events", "process_metric_events",
+        "log_events", "error_events",
+        "telemetry_event_ids", "telemetry_batches", "ingest_keys", "environments", "projects",
+        "sessions", "team_memberships", "teams", "users"
       CASCADE
     `);
     const authKeys = await redis.keys('blackbox:auth:*');
@@ -159,8 +160,68 @@ describeDependencies('Phase 4 heartbeat vertical slice', () => {
     };
   }
 
+  function processMetricEvent(occurredAt = new Date().toISOString(), eventId = randomUUID()) {
+    return {
+      cpuPercent: 12.5,
+      droppedEvents: 2,
+      eventId,
+      eventLoopDelayP99Ms: 4.25,
+      occurredAt,
+      rssBytes: 64 * 1024 * 1024,
+      serviceName: 'checkout',
+      serviceVersion: '1.0.0',
+      type: 'process_metric',
+      uptimeMs: 12_345,
+    };
+  }
+
+  function processMetricBatch(
+    events: readonly Record<string, unknown>[] = [processMetricEvent()],
+    batchId = randomUUID(),
+  ) {
+    return {
+      batchId,
+      events,
+      sentAt: new Date().toISOString(),
+      version: 1,
+    };
+  }
+
+  function logEvent(occurredAt = new Date().toISOString(), eventId = randomUUID()) {
+    return {
+      context: 'Checkout',
+      eventId,
+      level: 'warn',
+      message: 'payment failed',
+      metadata: { safe: { password: '[REDACTED]', requestId: 'req-1' } },
+      occurredAt,
+      serviceName: 'checkout',
+      serviceVersion: '1.0.0',
+      type: 'log',
+    };
+  }
+
+  function errorEvent(occurredAt = new Date().toISOString(), eventId = randomUUID()) {
+    return {
+      eventId,
+      message: 'boom',
+      metadata: { safe: { token: '[REDACTED]' } },
+      name: 'Error',
+      occurredAt,
+      serviceName: 'checkout',
+      serviceVersion: '1.0.0',
+      source: 'unhandled_rejection',
+      stack: 'Error: boom',
+      type: 'error',
+    };
+  }
+
+  function telemetryBatch(events: readonly Record<string, unknown>[], batchId = randomUUID()) {
+    return { batchId, events, sentAt: new Date().toISOString(), version: 1 };
+  }
+
   async function waitForCount(table: string, expected: number): Promise<void> {
-    for (let attempt = 0; attempt < 50; attempt += 1) {
+    for (let attempt = 0; attempt < 160; attempt += 1) {
       const rows = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
         `SELECT count(*)::bigint AS "count" FROM "${table}"`,
       );
@@ -332,7 +393,269 @@ describeDependencies('Phase 4 heartbeat vertical slice', () => {
     await waitForJobState(jobId, 'failed');
     await waitForCount('heartbeat_events', 0);
     const failed = await queue.getJob(jobId);
-    expect(failed?.failedReason).toBe('Invalid heartbeat job');
+    expect(failed?.failedReason).toBe('Invalid telemetry job');
+  });
+
+  it('validates approved process metric fields and persists mixed telemetry batches', async () => {
+    const owner = await register('metric-ingestion');
+    const fixture = await createIngestFixture(owner, 'metric-ingestion');
+    const metric = processMetricEvent();
+    const batch = processMetricBatch([metric]);
+
+    await request(api.getHttpServer())
+      .post('/v1/ingest/batches')
+      .set('X-Blackbox-Ingest-Key', fixture.ingestKey)
+      .send(processMetricBatch([{ ...metric, metadata: { secret: 'must-not-pass' } }]))
+      .expect(400);
+    await request(api.getHttpServer())
+      .post('/v1/ingest/batches')
+      .set('X-Blackbox-Ingest-Key', fixture.ingestKey)
+      .send(processMetricBatch([{ ...metric, cpuPercent: -1 }]))
+      .expect(400);
+    await request(api.getHttpServer())
+      .post('/v1/ingest/batches')
+      .set('X-Blackbox-Ingest-Key', fixture.ingestKey)
+      .send(processMetricBatch([{ ...metric, type: 'host_metric' }]))
+      .expect(400);
+
+    await request(api.getHttpServer())
+      .post('/v1/ingest/batches')
+      .set('X-Blackbox-Ingest-Key', fixture.ingestKey)
+      .send(batch)
+      .expect(202);
+    await waitForCount('process_metric_events', 1);
+
+    const mixed = heartbeatBatch();
+    await request(api.getHttpServer())
+      .post('/v1/ingest/batches')
+      .set('X-Blackbox-Ingest-Key', fixture.ingestKey)
+      .send({ ...mixed, events: [...mixed.events, processMetricEvent()] })
+      .expect(202);
+    await waitForCount('heartbeat_events', 1);
+    await waitForCount('process_metric_events', 2);
+  });
+
+  it('bulk-persists process metrics idempotently into monthly partitions and serves bounded queries', async () => {
+    const ownerA = await register('metric-query-a');
+    const ownerB = await register('metric-query-b');
+    const fixture = await createIngestFixture(ownerA, 'metric-query');
+    const now = Date.now();
+    const events = Array.from({ length: 100 }, (_, index) =>
+      processMetricEvent(new Date(now - index * 10).toISOString()),
+    );
+    const batch = processMetricBatch(events);
+
+    await Promise.all([
+      request(api.getHttpServer())
+        .post('/v1/ingest/batches')
+        .set('X-Blackbox-Ingest-Key', fixture.ingestKey)
+        .send(batch)
+        .expect(202),
+      request(api.getHttpServer())
+        .post('/v1/ingest/batches')
+        .set('X-Blackbox-Ingest-Key', fixture.ingestKey)
+        .send(batch)
+        .expect(202),
+    ]);
+    await waitForCount('process_metric_events', 100);
+
+    const duplicateWithinBatch = processMetricEvent();
+    await request(api.getHttpServer())
+      .post('/v1/ingest/batches')
+      .set('X-Blackbox-Ingest-Key', fixture.ingestKey)
+      .send(processMetricBatch([duplicateWithinBatch, duplicateWithinBatch]))
+      .expect(202);
+    await waitForCount('process_metric_events', 101);
+
+    await request(api.getHttpServer())
+      .post('/v1/ingest/batches')
+      .set('X-Blackbox-Ingest-Key', fixture.ingestKey)
+      .send(processMetricBatch([events[0]!]))
+      .expect(202);
+    await waitForCount('process_metric_events', 101);
+
+    const partitions = await prisma.$queryRawUnsafe<Array<{ partition: string }>>(`
+      SELECT child.relname AS "partition"
+      FROM pg_inherits
+      INNER JOIN pg_class parent ON pg_inherits.inhparent = parent.oid
+      INNER JOIN pg_class child ON pg_inherits.inhrelid = child.oid
+      WHERE parent.relname = 'process_metric_events'
+      ORDER BY child.relname
+    `);
+    expect(partitions.map(({ partition }) => partition)).toEqual(
+      expect.arrayContaining([
+        'process_metric_events_2026_06',
+        'process_metric_events_2026_07',
+        'process_metric_events_default',
+      ]),
+    );
+    const usedPartitions = await prisma.$queryRawUnsafe<Array<{ partition: string }>>(`
+      SELECT DISTINCT tableoid::regclass::text AS "partition"
+      FROM "process_metric_events"
+    `);
+    expect(usedPartitions).toEqual([{ partition: 'process_metric_events_2026_06' }]);
+    const indexes = await prisma.$queryRawUnsafe<Array<{ indexname: string }>>(`
+      SELECT indexname FROM pg_indexes WHERE tablename = 'process_metric_events'
+    `);
+    expect(indexes.map(({ indexname }) => indexname)).toEqual(
+      expect.arrayContaining([
+        'process_metric_events_environment_occurred_event_idx',
+        'process_metric_events_occurred_at_brin_idx',
+      ]),
+    );
+
+    const path = `/v1/teams/${ownerA.teamId}/projects/${fixture.projectId}/environments/${fixture.environmentId}/process-metrics`;
+    await request(api.getHttpServer()).get(path).expect(401);
+    const firstPage = await ownerA.agent.get(path).query({ limit: 2 }).expect(200);
+    expect(firstPage.body.items).toHaveLength(2);
+    expect(firstPage.body.items[0]).toMatchObject({
+      cpuPercent: 12.5,
+      droppedEvents: 2,
+      eventLoopDelayP99Ms: 4.25,
+      rssBytes: 64 * 1024 * 1024,
+      serviceName: 'checkout',
+      uptimeMs: 12_345,
+    });
+    const secondPage = await ownerA.agent
+      .get(path)
+      .query({ cursor: firstPage.body.nextCursor, limit: 2 })
+      .expect(200);
+    expect(secondPage.body.items).toHaveLength(2);
+    expect(
+      new Set([...firstPage.body.items, ...secondPage.body.items].map(({ eventId: id }) => id))
+        .size,
+    ).toBe(4);
+
+    await ownerA.agent
+      .get(path)
+      .query({
+        from: new Date(Date.now() - 25 * 60 * 60 * 1_000).toISOString(),
+        to: new Date().toISOString(),
+      })
+      .expect(400);
+    await ownerA.agent.get(path).query({ cursor: 'not-a-valid-cursor' }).expect(400);
+    await ownerB.agent
+      .get(
+        `/v1/teams/${ownerB.teamId}/projects/${fixture.projectId}/environments/${fixture.environmentId}/process-metrics`,
+      )
+      .expect(404);
+  });
+
+  it('validates, redacts, idempotently persists, and serves scoped bounded logs and errors', async () => {
+    const ownerA = await register('logs-errors-a');
+    const ownerB = await register('logs-errors-b');
+    const fixture = await createIngestFixture(ownerA, 'logs-errors');
+    const log = logEvent();
+    const error = errorEvent();
+
+    await request(api.getHttpServer())
+      .post('/v1/ingest/batches')
+      .set('X-Blackbox-Ingest-Key', fixture.ingestKey)
+      .send(telemetryBatch([{ ...log, metadata: { password: 'plaintext' } }]))
+      .expect(400);
+    await request(api.getHttpServer())
+      .post('/v1/ingest/batches')
+      .set('X-Blackbox-Ingest-Key', fixture.ingestKey)
+      .send(
+        telemetryBatch([
+          {
+            ...log,
+            metadata: Object.fromEntries(
+              Array.from({ length: 16 }, (_, index) => [`key${index}`, 'x'.repeat(2_048)]),
+            ),
+          },
+        ]),
+      )
+      .expect(400);
+
+    const batch = telemetryBatch([log, log, error, error]);
+    await Promise.all([
+      request(api.getHttpServer())
+        .post('/v1/ingest/batches')
+        .set('X-Blackbox-Ingest-Key', fixture.ingestKey)
+        .send(batch)
+        .expect(202),
+      request(api.getHttpServer())
+        .post('/v1/ingest/batches')
+        .set('X-Blackbox-Ingest-Key', fixture.ingestKey)
+        .send(batch)
+        .expect(202),
+    ]);
+    await waitForCount('log_events', 1);
+    await waitForCount('error_events', 1);
+    await request(api.getHttpServer())
+      .post('/v1/ingest/batches')
+      .set('X-Blackbox-Ingest-Key', fixture.ingestKey)
+      .send(
+        telemetryBatch([
+          logEvent(new Date(Date.now() - 1_000).toISOString()),
+          logEvent(new Date(Date.now() - 2_000).toISOString()),
+          errorEvent(new Date(Date.now() - 1_000).toISOString()),
+          errorEvent(new Date(Date.now() - 2_000).toISOString()),
+        ]),
+      )
+      .expect(202);
+    await waitForCount('log_events', 3);
+    await waitForCount('error_events', 3);
+
+    const logPath = `/v1/teams/${ownerA.teamId}/projects/${fixture.projectId}/environments/${fixture.environmentId}/logs`;
+    const errorPath = `/v1/teams/${ownerA.teamId}/projects/${fixture.projectId}/environments/${fixture.environmentId}/errors`;
+    await request(api.getHttpServer()).get(logPath).expect(401);
+    await request(api.getHttpServer()).get(errorPath).expect(401);
+    const logs = await ownerA.agent.get(logPath).query({ level: 'warn', limit: 2 }).expect(200);
+    const errors = await ownerA.agent.get(errorPath).query({ limit: 2 }).expect(200);
+    expect(logs.body.items).toHaveLength(2);
+    expect(logs.body.nextCursor).toBeTruthy();
+    const remainingLogs = await ownerA.agent
+      .get(logPath)
+      .query({ cursor: logs.body.nextCursor, level: 'warn', limit: 2 })
+      .expect(200);
+    expect(remainingLogs.body.items).toHaveLength(1);
+    expect(logs.body.items[0]).toMatchObject({
+      level: 'warn',
+      metadata: { safe: { password: '[REDACTED]', requestId: 'req-1' } },
+    });
+    expect(errors.body.items).toHaveLength(2);
+    expect(errors.body.nextCursor).toBeTruthy();
+    const remainingErrors = await ownerA.agent
+      .get(errorPath)
+      .query({ cursor: errors.body.nextCursor, limit: 2 })
+      .expect(200);
+    expect(remainingErrors.body.items).toHaveLength(1);
+    expect(errors.body.items[0]).toMatchObject({
+      metadata: { safe: { token: '[REDACTED]' } },
+      source: 'unhandled_rejection',
+    });
+    expect(JSON.stringify({ logs: logs.body, errors: errors.body })).not.toContain('plaintext');
+    await ownerA.agent.get(logPath).query({ level: 'unsupported' }).expect(400);
+    await ownerA.agent.get(errorPath).query({ cursor: 'invalid' }).expect(400);
+    await ownerA.agent
+      .get(logPath)
+      .query({
+        from: new Date(Date.now() - 25 * 60 * 60 * 1_000).toISOString(),
+        to: new Date().toISOString(),
+      })
+      .expect(400);
+    await ownerB.agent
+      .get(
+        `/v1/teams/${ownerB.teamId}/projects/${fixture.projectId}/environments/${fixture.environmentId}/logs`,
+      )
+      .expect(404);
+
+    const partitions = await prisma.$queryRawUnsafe<Array<{ parent: string; partition: string }>>(`
+      SELECT parent.relname AS "parent", child.relname AS "partition"
+      FROM pg_inherits
+      INNER JOIN pg_class parent ON pg_inherits.inhparent = parent.oid
+      INNER JOIN pg_class child ON pg_inherits.inhrelid = child.oid
+      WHERE parent.relname IN ('log_events', 'error_events')
+      ORDER BY parent.relname, child.relname
+    `);
+    expect(partitions).toEqual(
+      expect.arrayContaining([
+        { parent: 'log_events', partition: 'log_events_2026_06' },
+        { parent: 'error_events', partition: 'error_events_2026_06' },
+      ]),
+    );
   });
 
   it('opens one inferred missing-heartbeat incident and resolves it on recovery', async () => {
@@ -373,7 +696,7 @@ describeDependencies('Phase 4 heartbeat vertical slice', () => {
     expect(resolved[0]?.resolvedAt).toBeInstanceOf(Date);
   });
 
-  it('keeps the example application running while its SDK reports heartbeats', async () => {
+  it('keeps the example application running while its SDK reports heartbeats and process metrics', async () => {
     const owner = await register('example');
     const fixture = await createIngestFixture(owner, 'example');
     const apiAddress = api.getHttpServer().address() as AddressInfo;
@@ -382,6 +705,8 @@ describeDependencies('Phase 4 heartbeat vertical slice', () => {
         controlPlaneUrl: `http://127.0.0.1:${apiAddress.port}`,
         heartbeatIntervalMs: 5_000,
         ingestKey: fixture.ingestKey,
+        metadataAllowlist: ['safe'],
+        processMetricsIntervalMs: 5_000,
         requestTimeoutMs: 500,
         serviceName: 'blackbox-example',
       }),
@@ -392,11 +717,33 @@ describeDependencies('Phase 4 heartbeat vertical slice', () => {
     try {
       await request(example.getHttpServer()).get('/').expect(200);
       await waitForCount('heartbeat_events', 1);
+      await waitForCount('process_metric_events', 1);
+      const phase6Capture = await request(example.getHttpServer())
+        .post('/phase6-telemetry')
+        .expect(201);
+      expect(phase6Capture.body).toEqual({ hostLogForwarded: true, status: 'ok' });
+      await waitForCount('log_events', 1);
+      await waitForCount('error_events', 1);
       await request(example.getHttpServer()).get('/').expect(200);
+
+      const metricPath = `/v1/teams/${owner.teamId}/projects/${fixture.projectId}/environments/${fixture.environmentId}/process-metrics`;
+      const metrics = await owner.agent.get(metricPath).expect(200);
+      expect(metrics.body.items).toHaveLength(1);
+      expect(metrics.body.items[0].serviceName).toBe('blackbox-example');
+      const logPath = `/v1/teams/${owner.teamId}/projects/${fixture.projectId}/environments/${fixture.environmentId}/logs`;
+      const errorPath = `/v1/teams/${owner.teamId}/projects/${fixture.projectId}/environments/${fixture.environmentId}/errors`;
+      const phase6Telemetry = JSON.stringify({
+        errors: (await owner.agent.get(errorPath).expect(200)).body,
+        logs: (await owner.agent.get(logPath).expect(200)).body,
+      });
+      expect(phase6Telemetry).toContain('[REDACTED]');
+      expect(phase6Telemetry).not.toContain('example-password');
+      expect(phase6Telemetry).not.toContain('example-token');
+      expect(phase6Telemetry).not.toContain('prohibited-value');
     } finally {
       await example.close();
     }
-  });
+  }, 15_000);
 
   it('fails closed when durable enqueue is unavailable', async () => {
     const owner = await register('redis-down');
